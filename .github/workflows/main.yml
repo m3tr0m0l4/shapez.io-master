@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - main
   workflow_dispatch:
 
 permissions:
@@ -19,50 +18,53 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      build-path: ${{ steps.upload.outputs.artifact-path || 'build' }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup system deps
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y default-jre ffmpeg
+          sudo apt-get install -y ffmpeg default-jre
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 16
-          cache: 'yarn'
+          cache: yarn
 
-      - name: Install root deps
+      - name: Install root dependencies
         run: yarn --frozen-lockfile
 
-      - name: Install gulp deps
+      - name: Install gulp dependencies
         run: |
           cd gulp
           yarn --frozen-lockfile
           cd ..
 
-      - name: Build site (production)
+      - name: Build (generate local config + translations + web)
         run: |
           cd gulp
+          yarn gulp translations.fullBuild
+          yarn gulp localConfig.findOrCreate
           yarn gulp build.web-shapezio
           cd ..
 
       - name: Configure Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
-        id: upload
+      - name: Upload Pages artifact (build folder)
         uses: actions/upload-pages-artifact@v3
         with:
           path: build
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
