@@ -1,58 +1,69 @@
-name: CI
+name: Deploy to GitHub Pages
 
 on:
-    push:
-        branches:
-            - master
-            - ModdedGamers-GH-Actions
-    pull_request:
-        branches:
-            - master
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-    setup:
-        name: CI
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      build-path: ${{ steps.upload.outputs.artifact-path || 'build' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        runs-on: ubuntu-latest
+      - name: Setup system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre ffmpeg
 
-        steps:
-            - name: Install Dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install ffmpeg
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16
+          cache: 'yarn'
 
-            - name: Setup Node
-              uses: actions/setup-node@v2-beta
-              with:
-                  node-version: 16.x
+      - name: Install root deps
+        run: yarn --frozen-lockfile
 
-            - name: Checkout repo
-              uses: actions/checkout@v2
+      - name: Install gulp deps
+        run: |
+          cd gulp
+          yarn --frozen-lockfile
+          cd ..
 
-            - name: Install Yarn Dependencies
-              run: |
-                  yarn
-                  cd gulp/
-                  yarn
-                  cd ..
-            - name: Lint
-              run: |
-                  yarn lint
-            - name: TSLint
-              run: |
-                  cd gulp
-                  yarn gulp translations.fullBuild
-                  yarn gulp localConfig.findOrCreate
-                  cd ..
-                  yarn tslint
+      - name: Build site (production)
+        run: |
+          cd gulp
+          yarn gulp build.web-shapezio
+          cd ..
 
-    yaml-lint:
-        name: yaml-lint
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repo
-              uses: actions/checkout@v2
-            - name: YAML Lint
-              uses: ibiqlik/action-yamllint@v1.0.0
-              with:
-                  file_or_dir: translations/*.yaml
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        id: upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
