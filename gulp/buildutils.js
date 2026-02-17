@@ -42,6 +42,10 @@ module.exports = {
      * @param {string} commitHash
      */
     cachebust(url, commitHash) {
-        return "/v/" + commitHash + "/" + url;
-    },
+    // GitHub Pages project sites are not hosted at domain root,
+    // so avoid absolute paths like "/v/<hash>/...".
+    // Use a querystring instead.
+    return url + "?v=" + commitHash;
+},
+
 };
