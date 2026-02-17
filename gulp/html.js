@@ -138,7 +138,15 @@ function gulptasksHTML($, gulp, buildFolder) {
                             const loadJs = document.createElement("script");
                             loadJs.type = "text/javascript";
                             let scriptContent = "";
-                            scriptContent += `var bundleSrc = '${cachebust("bundle.js")}';\n`;
+                            // Compute correct base for GitHub Pages project sites
+scriptContent += `
+var __basePath = window.location.pathname;
+if (!__basePath.endsWith("/")) {
+    __basePath = __basePath.substring(0, __basePath.lastIndexOf("/") + 1);
+}
+var bundleSrc = __basePath + '${cachebust("bundle.js")}';
+\n`;
+
 
                             if (integrity) {
                                 scriptContent +=
