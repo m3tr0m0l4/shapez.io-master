@@ -4,7 +4,9 @@
  */
 export function cachebust(path) {
     if (G_IS_BROWSER && !G_IS_STANDALONE && !G_IS_DEV) {
-        return "/v/" + G_BUILD_COMMIT_HASH + "/" + path;
+        // GitHub Pages project sites are hosted under /<repo>/, so avoid absolute /v/... paths.
+        // Use a querystring cachebuster instead.
+        return path + "?v=" + G_BUILD_COMMIT_HASH;
     }
     return path;
 }
